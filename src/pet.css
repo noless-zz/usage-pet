@@ -39,7 +39,7 @@ body {
 #stage {
   position: relative;
   width: 270px;
-  height: 420px;
+  height: 470px;
   transform-origin: top left;
 }
 
@@ -47,7 +47,7 @@ body {
 #pet {
   position: absolute;
   left: 63px;
-  bottom: 0;
+  bottom: 50px; /* room for the always-visible bars (#hud) under the pet */
   width: 144px;
   height: 144px;
   cursor: grab;
@@ -104,6 +104,65 @@ body {
   }
 }
 
+/* ---------- always-visible bars under the pet ---------- */
+#hud {
+  position: absolute;
+  top: 100%;
+  left: -26px;
+  width: 196px;
+  margin-top: 4px;
+  padding: 5px 8px;
+  border-radius: 10px;
+  background: var(--card);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  font-size: 11px;
+}
+#hud:empty {
+  display: none;
+}
+#hud .hrow {
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  align-items: center;
+  gap: 6px;
+  line-height: 15px;
+}
+#hud .hname {
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#hud .htrack {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--track);
+  overflow: hidden;
+}
+#hud .hfill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--ok);
+  transition: width 0.4s ease;
+}
+#hud .hfill.warn {
+  background: var(--warn);
+}
+#hud .hfill.bad {
+  background: var(--bad);
+}
+#hud .htext {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+  min-width: 74px;
+  text-align: right;
+}
+#hud .htext small {
+  font-weight: 400;
+  color: var(--muted);
+}
+
 #thought {
   position: absolute;
   right: 6px;
@@ -146,7 +205,7 @@ body {
   position: absolute;
   left: 8px;
   right: 8px;
-  bottom: 150px;
+  bottom: 200px;
   padding: 10px 12px 9px;
   border-radius: 14px;
   background: var(--card);

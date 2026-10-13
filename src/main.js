@@ -29,7 +29,7 @@ const { buildCustomPet } = require('./pixelize');
 const CLAUDE = 'https://claude.ai';
 const PARTITION = 'persist:claude';
 const BASE_W = 270;
-const BASE_H = 420;
+const BASE_H = 470;
 
 // A plain Chrome user agent: claude.ai and Google sign-in treat it like a normal browser.
 const CHROME_UA =

@@ -102,6 +102,8 @@
     }
     if (state.loading) badge.classList.add('loading');
 
+    renderHud(buckets);
+
     // thought bubble above the head
     if (mood === 'asleep') thought.innerHTML = '<span class="z">Z</span><span class="z">z</span><span class="z">z</span>';
     else if (mood === 'confused' || mood === 'login') thought.textContent = '?';
@@ -120,6 +122,34 @@
       for (const b of buckets.slice(0, 5)) content.appendChild(meter(b));
     }
     footer.textContent = footerText();
+  }
+
+  // Always-visible bars: name, bar, "68% · 2h 14m" (percent used · time until reset)
+  function renderHud(buckets) {
+    const hud = document.getElementById('hud');
+    hud.innerHTML = '';
+    if (!state.loggedIn) return;
+    for (const b of U.hudBuckets(buckets)) {
+      const row = document.createElement('div');
+      row.className = 'hrow';
+      row.title = b.label + (U.formatReset(b) ? ' · ' + U.formatReset(b) : '');
+      const name = document.createElement('span');
+      name.className = 'hname';
+      name.textContent = b.key === 'five_hour' ? 'Session' : b.key === 'seven_day' ? 'Week' : b.label.replace(/^Weekly · /, '');
+      const track = document.createElement('div');
+      track.className = 'htrack';
+      const fill = document.createElement('div');
+      const lvl = levelClass(b.percent);
+      fill.className = 'hfill' + (lvl === 'ok' ? '' : ' ' + lvl);
+      fill.style.width = Math.max(2, b.percent) + '%';
+      track.appendChild(fill);
+      const text = document.createElement('span');
+      text.className = 'htext';
+      const left = U.formatRemaining(b);
+      text.innerHTML = Math.round(b.percent) + '%' + (left ? ' <small>· ' + left.replace(/[<&]/g, '') + '</small>' : '');
+      row.append(name, track, text);
+      hud.appendChild(row);
+    }
   }
 
   function moodLine(m, head) {
@@ -171,6 +201,7 @@
   function meter(b) {
     const wrap = document.createElement('div');
     wrap.className = 'meter';
+    wrap.title = 'API key: ' + b.key;
     const row = document.createElement('div');
     row.className = 'row';
     const l = document.createElement('span');

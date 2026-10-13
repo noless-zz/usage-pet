@@ -174,7 +174,32 @@ function formatReset(bucket, now = Date.now()) {
   return bucket.resetText ? `resets ${bucket.resetText}` : '';
 }
 
+// Compact countdown to the next reset: "45m", "2h 14m", "3d 4h". '' when unknown.
+function formatRemaining(bucket, now = Date.now()) {
+  if (bucket.resetsAt) {
+    const ms = Date.parse(bucket.resetsAt) - now;
+    if (!Number.isFinite(ms)) return '';
+    if (ms <= 0) return 'now';
+    const mins = Math.max(1, Math.round(ms / 60000));
+    if (mins < 60) return `${mins}m`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ${mins % 60}m`;
+    return `${Math.floor(hrs / 24)}d ${hrs % 24}h`;
+  }
+  return bucket.resetText ? String(bucket.resetText) : '';
+}
+
+// The always-visible bars under the pet: session + weekly, or the two busiest limits.
+function hudBuckets(buckets) {
+  const real = (buckets || []).filter((b) => b.key !== 'extra_usage');
+  const pick = ['five_hour', 'seven_day'].map((k) => real.find((b) => b.key === k)).filter(Boolean);
+  if (pick.length) return pick;
+  return real.slice().sort((a, b) => b.percent - a.percent).slice(0, 2);
+}
+
 const api = {
+  formatRemaining,
+  hudBuckets,
   normalizeApiUsage,
   normalizePageText,
   applyRollover,
