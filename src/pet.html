@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:" />
+    <title>Usage Pet</title>
+    <link rel="stylesheet" href="pet.css" />
+  </head>
+  <body>
+    <div id="stage">
+      <section id="panel" class="hidden" aria-live="polite">
+        <header>
+          <span id="title">Sprout</span>
+          <span id="headline"></span>
+        </header>
+        <div id="content"></div>
+        <footer id="footer"></footer>
+      </section>
+
+      <div id="pet" title="">
+        <div id="thought"></div>
+        <canvas id="canvas" width="144" height="144"></canvas>
+        <span id="badge"></span>
+      </div>
+    </div>
+
+    <script src="sprite.js"></script>
+    <script src="usage.js"></script>
+    <script src="pet.js"></script>
+  </body>
+</html>

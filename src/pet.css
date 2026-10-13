@@ -1,0 +1,267 @@
+:root {
+  --card: rgba(255, 255, 255, 0.97);
+  --ink: #1f2a26;
+  --muted: #6b7672;
+  --track: #e6ebe8;
+  --line: rgba(0, 0, 0, 0.08);
+  --ok: #3fae7a;
+  --warn: #e0a526;
+  --bad: #d9534f;
+  --accent: #2f7a5e;
+  --shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --card: rgba(32, 36, 35, 0.97);
+    --ink: #eef3f0;
+    --muted: #a3ada9;
+    --track: #3a413f;
+    --line: rgba(255, 255, 255, 0.08);
+    --accent: #7fd8b2;
+    --shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  font: 13px/1.35 'Segoe UI', system-ui, -apple-system, sans-serif;
+  color: var(--ink);
+  user-select: none;
+}
+
+#stage {
+  position: relative;
+  width: 270px;
+  height: 420px;
+  transform-origin: top left;
+}
+
+/* ---------- the pet ---------- */
+#pet {
+  position: absolute;
+  left: 63px;
+  bottom: 0;
+  width: 144px;
+  height: 144px;
+  cursor: grab;
+}
+#pet.dragging {
+  cursor: grabbing;
+}
+#canvas {
+  width: 144px;
+  height: 144px;
+  image-rendering: pixelated;
+  display: block;
+}
+#badge {
+  position: absolute;
+  right: -6px;
+  bottom: 26px;
+  min-width: 38px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--card);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  font-weight: 700;
+  font-size: 12px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+#badge:empty {
+  display: none;
+}
+#badge.ok {
+  color: var(--ok);
+}
+#badge.warn {
+  color: var(--warn);
+}
+#badge.bad {
+  color: var(--bad);
+}
+#badge.loading::after {
+  content: '';
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-left: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  vertical-align: middle;
+  animation: pulse 0.9s ease-in-out infinite;
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.2;
+  }
+}
+
+#thought {
+  position: absolute;
+  right: 6px;
+  top: 0;
+  font: 700 18px/1 'Segoe UI', system-ui, sans-serif;
+  color: #5d5873;
+  pointer-events: none;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+#thought .z {
+  position: absolute;
+  animation: floatz 2.4s linear infinite;
+  opacity: 0;
+  color: #6c7f99;
+}
+#thought .z:nth-child(2) {
+  animation-delay: 0.8s;
+  font-size: 14px;
+}
+#thought .z:nth-child(3) {
+  animation-delay: 1.6s;
+  font-size: 11px;
+}
+@keyframes floatz {
+  0% {
+    transform: translate(0, 28px);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(16px, -6px);
+    opacity: 0;
+  }
+}
+
+/* ---------- the info bubble ---------- */
+#panel {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 150px;
+  padding: 10px 12px 9px;
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--line);
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+#panel::after {
+  /* little tail pointing at the pet */
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
+  background: var(--card);
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  transform: rotate(45deg);
+}
+#panel.hidden {
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+}
+#panel header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+#title {
+  font-weight: 700;
+}
+#headline {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.meter {
+  margin: 4px 0 6px;
+}
+.meter .row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+.meter .label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.1px;
+}
+.meter .pct {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.meter .track {
+  height: 7px;
+  margin-top: 3px;
+  border-radius: 999px;
+  background: var(--track);
+  overflow: hidden;
+}
+.meter .fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--ok);
+  transition: width 0.4s ease;
+}
+.meter .fill.warn {
+  background: var(--warn);
+}
+.meter .fill.bad {
+  background: var(--bad);
+}
+.meter .reset {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.message {
+  margin: 4px 0 8px;
+  color: var(--ink);
+}
+.btn {
+  display: inline-block;
+  margin-top: 2px;
+  padding: 5px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font: 600 12px 'Segoe UI', system-ui, sans-serif;
+  cursor: pointer;
+}
+@media (prefers-color-scheme: dark) {
+  .btn {
+    color: #10201a;
+  }
+}
+
+#footer {
+  margin-top: 2px;
+  padding-top: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.1px;
+  border-top: 1px solid var(--line);
+  font-size: 11px;
+  color: var(--muted);
+}

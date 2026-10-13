@@ -1,0 +1,47 @@
+{
+  "name": "usage-pet",
+  "productName": "Usage Pet",
+  "version": "0.1.0",
+  "description": "A little desktop pet that shows your Claude usage limits — it gets sleepier as you get closer to the limit.",
+  "main": "src/main.js",
+  "author": "Noam",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/*.test.js",
+    "assets": "node scripts/make-assets.js",
+    "dist": "npm run assets && electron-builder --win",
+    "dist:dir": "npm run assets && electron-builder --win --dir"
+  },
+  "devDependencies": {
+    "electron": "^38.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "com.noam.usagepet",
+    "productName": "Usage Pet",
+    "files": [
+      "src/**/*",
+      "build/icon.png",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "shortcutName": "Usage Pet"
+    },
+    "portable": {
+      "artifactName": "UsagePet-portable-${version}.exe"
+    }
+  }
+}
