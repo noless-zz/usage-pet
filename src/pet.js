@@ -56,7 +56,12 @@
       nextBlink = now + 2500 + Math.random() * 3500;
     }
     const { dy, squash } = bounceFor(now);
-    const sprite = S.drawPet(mood, { blink: now < blinkUntil, squash });
+    const sprite = S.drawPet(mood, {
+      blink: now < blinkUntil,
+      squash,
+      species: state.species,
+      custom: state.custom,
+    });
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     for (let y = 0; y < sprite.h; y++)
       for (let x = 0; x < sprite.w; x++) {
@@ -83,6 +88,9 @@
     if (state.loading && !buckets.length && state.loggedIn) mood = 'ok';
 
     stage.style.zoom = state.scale || 1;
+
+    const sp = S.SPECIES.find((s) => s.id === state.species);
+    document.getElementById('title').textContent = state.custom ? 'My pet' : sp ? sp.label : 'Sprout';
 
     // badge
     badge.className = '';

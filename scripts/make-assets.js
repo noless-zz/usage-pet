@@ -2,7 +2,7 @@
 // Run: node scripts/make-assets.js
 const fs = require('fs');
 const path = require('path');
-const { drawPet, MOODS } = require('../src/sprite');
+const { drawPet, MOODS, SPECIES } = require('../src/sprite');
 const { encodePNG, blit } = require('./png');
 
 const outDir = path.join(__dirname, '..', 'build');
@@ -21,7 +21,7 @@ fs.mkdirSync(outDir, { recursive: true });
   const scale = 6;
   const cell = 24 * scale + 20;
   const width = cell * MOODS.length;
-  const height = cell;
+  const height = cell * SPECIES.length;
   const rgba = Buffer.alloc(width * height * 4);
   for (let i = 0; i < rgba.length; i += 4) {
     rgba[i] = 245;
@@ -29,7 +29,9 @@ fs.mkdirSync(outDir, { recursive: true });
     rgba[i + 2] = 238;
     rgba[i + 3] = 255;
   }
-  MOODS.forEach((m, i) => blit(rgba, width, drawPet(m), i * cell + 10, 10, scale));
+  SPECIES.forEach((s, row) =>
+    MOODS.forEach((m, i) => blit(rgba, width, drawPet(m, { species: s.id }), i * cell + 10, row * cell + 10, scale))
+  );
   fs.writeFileSync(path.join(outDir, 'preview.png'), encodePNG(width, height, rgba));
 }
 console.log('wrote build/icon.png and build/preview.png');

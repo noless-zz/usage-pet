@@ -12,10 +12,13 @@ const {
   shell,
   session,
   Notification,
+  dialog,
 } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const usage = require('./usage');
+const sprite = require('./sprite');
+const { buildCustomPet } = require('./pixelize');
 
 const CLAUDE = 'https://claude.ai';
 const PARTITION = 'persist:claude';
@@ -39,7 +42,16 @@ const notified = new Set(); // "bucketKey:threshold" already announced
 
 // ---------- settings ----------
 const settingsFile = () => path.join(app.getPath('userData'), 'settings.json');
-const DEFAULTS = { x: null, y: null, scale: 1, intervalMin: 5, notify: true, visible: true };
+const DEFAULTS = {
+  x: null,
+  y: null,
+  scale: 1,
+  intervalMin: 5,
+  notify: true,
+  visible: true,
+  species: 'sprout', // a sprite.js species id, or 'custom'
+  custom: null, // 576 colors made from the user's image
+};
 let settings = { ...DEFAULTS };
 function loadSettings() {
   try {
@@ -108,7 +120,52 @@ function createPetWindow() {
 
 function pushState() {
   if (!petWin || petWin.isDestroyed()) return;
-  petWin.webContents.send('usage:update', { ...state, scale: settings.scale });
+  petWin.webContents.send('usage:update', petState());
+}
+
+function petState() {
+  return {
+    ...state,
+    scale: settings.scale,
+    species: settings.species,
+    custom: settings.species === 'custom' ? settings.custom : null,
+  };
+}
+
+// ---------- choosing a pet ----------
+function setSpecies(id) {
+  settings.species = id;
+  saveSettings();
+  pushState();
+  if (tray) tray.setContextMenu(buildMenu());
+}
+
+async function pickImagePet() {
+  const r = await dialog.showOpenDialog({
+    title: 'Choose a picture for your pet',
+    properties: ['openFile'],
+    filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'bmp', 'gif', 'webp'] }],
+  });
+  if (r.canceled || !r.filePaths[0]) return;
+  let img = nativeImage.createFromPath(r.filePaths[0]);
+  if (img.isEmpty()) {
+    dialog.showErrorBox('Usage Pet', "I couldn't read that image. Try a PNG or JPG.");
+    return;
+  }
+  const { width, height } = img.getSize();
+  const k = Math.min(1, 128 / Math.max(width, height));
+  if (k < 1) img = img.resize({ width: Math.max(1, Math.round(width * k)), height: Math.max(1, Math.round(height * k)), quality: 'best' });
+  const size = img.getSize();
+  const bgra = img.toBitmap();
+  const rgba = Buffer.alloc(bgra.length);
+  for (let i = 0; i < bgra.length; i += 4) {
+    rgba[i] = bgra[i + 2];
+    rgba[i + 1] = bgra[i + 1];
+    rgba[i + 2] = bgra[i];
+    rgba[i + 3] = bgra[i + 3];
+  }
+  settings.custom = buildCustomPet(rgba, size.width, size.height);
+  setSpecies('custom');
 }
 
 // ---------- claude.ai session ----------
@@ -378,6 +435,22 @@ function buildMenu() {
   const loginItem = app.getLoginItemSettings();
   return Menu.buildFromTemplate([
     { label: settings.visible ? 'Hide pet' : 'Show pet', click: () => setVisible(!settings.visible) },
+    {
+      label: 'Choose pet',
+      submenu: [
+        ...sprite.SPECIES.map((s) => ({
+          label: s.label,
+          type: 'radio',
+          checked: settings.species === s.id,
+          click: () => setSpecies(s.id),
+        })),
+        { type: 'separator' },
+        ...(settings.custom
+          ? [{ label: 'My picture', type: 'radio', checked: settings.species === 'custom', click: () => setSpecies('custom') }]
+          : []),
+        { label: 'Make a pet from an image…', click: pickImagePet },
+      ],
+    },
     { label: 'Refresh now', click: refresh },
     { label: 'Open Claude', click: () => shell.openExternal(CLAUDE + '/new') },
     { label: 'Open usage page', click: () => shell.openExternal(CLAUDE + '/settings/usage') },
@@ -464,7 +537,7 @@ ipcMain.on('pet:menu', () => {
 ipcMain.on('pet:open-claude', () => shell.openExternal(CLAUDE + '/new'));
 ipcMain.on('pet:login', openLogin);
 ipcMain.on('pet:refresh', refresh);
-ipcMain.handle('pet:get-state', () => ({ ...state, scale: settings.scale }));
+ipcMain.handle('pet:get-state', () => petState());
 
 // ---------- app lifecycle ----------
 if (!app.requestSingleInstanceLock()) {
