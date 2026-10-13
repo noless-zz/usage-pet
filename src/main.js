@@ -13,10 +13,16 @@ const {
   session,
   Notification,
   dialog,
+  net,
 } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const usage = require('./usage');
+const os = require('os');
+const { spawn } = require('child_process');
+const { Readable } = require('stream');
+const { pipeline } = require('stream/promises');
+const updater = require('./updater');
 const sprite = require('./sprite');
 const { buildCustomPet } = require('./pixelize');
 
@@ -49,6 +55,7 @@ const DEFAULTS = {
   intervalMin: 5,
   notify: true,
   visible: true,
+  autoUpdate: true,
   species: 'sprout', // a sprite.js species id, or 'custom'
   custom: null, // 576 colors made from the user's image
 };
@@ -334,6 +341,85 @@ async function signOut() {
   updateTray();
 }
 
+// ---------- updates (GitHub Releases) ----------
+let updateInfo = null; // set when a newer release exists
+let checkingUpdate = false;
+const isPortable = () => !!process.env.PORTABLE_EXECUTABLE_FILE;
+
+async function checkForUpdates(manual) {
+  if (checkingUpdate) return;
+  checkingUpdate = true;
+  try {
+    const res = await net.fetch(`https://api.github.com/repos/${updater.REPO}/releases/latest`, {
+      headers: { accept: 'application/vnd.github+json', 'user-agent': 'usage-pet' },
+    });
+    if (res.status === 404) {
+      if (manual) dialog.showMessageBox({ message: 'No releases published yet.' });
+      return;
+    }
+    if (!res.ok) throw new Error('GitHub answered ' + res.status);
+    updateInfo = updater.pickUpdate(await res.json(), app.getVersion(), isPortable() ? 'portable' : 'installer');
+    if (tray) tray.setContextMenu(buildMenu());
+    if (!updateInfo) {
+      if (manual) dialog.showMessageBox({ message: `You're up to date (v${app.getVersion()}).` });
+    } else if (manual) {
+      promptUpdate();
+    } else if (Notification.isSupported() && notifiedUpdate !== updateInfo.version) {
+      notifiedUpdate = updateInfo.version;
+      const n = new Notification({ title: 'Usage Pet update available', body: `Version ${updateInfo.version} is ready. Click to update.` });
+      n.on('click', promptUpdate);
+      n.show();
+    }
+  } catch (e) {
+    if (manual) dialog.showErrorBox('Usage Pet', "Couldn't check for updates: " + (e.message || e));
+  } finally {
+    checkingUpdate = false;
+  }
+}
+let notifiedUpdate = null;
+
+async function promptUpdate() {
+  if (!updateInfo) return;
+  const canSelfUpdate = app.isPackaged && updateInfo.asset && process.platform === 'win32';
+  const { response } = await dialog.showMessageBox({
+    type: 'info',
+    title: 'Usage Pet update',
+    message: `Version ${updateInfo.version} is available (you have ${app.getVersion()}).`,
+    detail: (updateInfo.notes || '').slice(0, 600),
+    buttons: canSelfUpdate ? ['Update now', 'Release page', 'Later'] : ['Release page', 'Later'],
+    defaultId: 0,
+    cancelId: canSelfUpdate ? 2 : 1,
+  });
+  const choice = canSelfUpdate ? ['now', 'page', 'later'][response] : ['page', 'later'][response];
+  if (choice === 'page') shell.openExternal(updateInfo.pageUrl);
+  else if (choice === 'now') applyUpdate().catch((e) => dialog.showErrorBox('Usage Pet', 'Update failed: ' + (e.message || e)));
+}
+
+async function download(url, dest) {
+  const res = await net.fetch(url, { headers: { 'user-agent': 'usage-pet' } });
+  if (!res.ok || !res.body) throw new Error('download failed (' + res.status + ')');
+  await pipeline(Readable.fromWeb(res.body), fs.createWriteStream(dest));
+}
+
+async function applyUpdate() {
+  const { asset } = updateInfo;
+  if (isPortable()) {
+    // download next to the exe, then a small script swaps it in after we exit and relaunches
+    const target = process.env.PORTABLE_EXECUTABLE_FILE;
+    const fresh = target + '.new';
+    await download(asset.url, fresh);
+    const bat = path.join(os.tmpdir(), 'usage-pet-update.bat');
+    fs.writeFileSync(bat, updater.swapScript(fresh, target, process.pid));
+    spawn('cmd.exe', ['/c', bat], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+    app.quit();
+  } else {
+    const file = path.join(os.tmpdir(), asset.name);
+    await download(asset.url, file);
+    await shell.openPath(file); // the installer replaces this version and relaunches
+    app.quit();
+  }
+}
+
 // ---------- notifications ----------
 function maybeNotify() {
   if (!settings.notify || !Notification.isSupported()) return;
@@ -496,6 +582,19 @@ function buildMenu() {
       click: (mi) => app.setLoginItemSettings({ openAtLogin: mi.checked }),
     },
     { type: 'separator' },
+    updateInfo
+      ? { label: `Update to v${updateInfo.version}…`, click: promptUpdate }
+      : { label: `Check for updates (v${app.getVersion()})`, click: () => checkForUpdates(true) },
+    {
+      label: 'Check for updates automatically',
+      type: 'checkbox',
+      checked: settings.autoUpdate,
+      click: (mi) => {
+        settings.autoUpdate = mi.checked;
+        saveSettings();
+      },
+    },
+    { type: 'separator' },
     { label: 'Quit Usage Pet', click: () => app.quit() },
   ]);
 }
@@ -556,6 +655,10 @@ if (!app.requestSingleInstanceLock()) {
       if (!state.loggedIn) openLogin();
     });
     schedulePolling();
+    // look for a new release shortly after start, then twice a day
+    const autoCheck = () => settings.autoUpdate && checkForUpdates(false);
+    setTimeout(autoCheck, 20000);
+    setInterval(autoCheck, 12 * 60 * 60 * 1000);
   });
 
   // The pet lives in the tray; closing the login window must not quit the app.
