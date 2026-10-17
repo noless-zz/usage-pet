@@ -56,6 +56,7 @@ const DEFAULTS = {
   notify: true,
   visible: true,
   autoUpdate: true,
+  alwaysOnTop: true,
   species: 'sprout', // a sprite.js species id, or 'custom'
   custom: null, // 576 colors made from the user's image
 };
@@ -113,7 +114,7 @@ function createPetWindow() {
       nodeIntegration: false,
     },
   });
-  petWin.setAlwaysOnTop(true, 'floating');
+  applyAlwaysOnTop();
   petWin.setVisibleOnAllWorkspaces(true);
   // Transparent parts of the window let clicks fall through to the desktop.
   petWin.setIgnoreMouseEvents(true, { forward: true });
@@ -123,6 +124,19 @@ function createPetWindow() {
     pushState();
   });
   petWin.on('closed', () => (petWin = null));
+}
+
+function applyAlwaysOnTop() {
+  if (!petWin || petWin.isDestroyed()) return;
+  // 'screen-saver' level also stays above most other topmost windows and the taskbar
+  petWin.setAlwaysOnTop(settings.alwaysOnTop, 'screen-saver');
+}
+
+function setAlwaysOnTop(v) {
+  settings.alwaysOnTop = v;
+  saveSettings();
+  applyAlwaysOnTop();
+  if (tray) tray.setContextMenu(buildMenu());
 }
 
 function pushState() {
@@ -521,6 +535,7 @@ function buildMenu() {
   const loginItem = app.getLoginItemSettings();
   return Menu.buildFromTemplate([
     { label: settings.visible ? 'Hide pet' : 'Show pet', click: () => setVisible(!settings.visible) },
+    { label: 'Always on top', type: 'checkbox', checked: settings.alwaysOnTop, click: (mi) => setAlwaysOnTop(mi.checked) },
     {
       label: 'Choose pet',
       submenu: [
