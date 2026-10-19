@@ -12,4 +12,5 @@ contextBridge.exposeInMainWorld('petAPI', {
   openClaude: () => ipcRenderer.send('pet:open-claude'),
   login: () => ipcRenderer.send('pet:login'),
   refresh: () => ipcRenderer.send('pet:refresh'),
+  cursor: () => ipcRenderer.invoke('pet:cursor'),
 });

@@ -212,8 +212,8 @@ body {
   box-shadow: var(--shadow);
   border: 1px solid var(--line);
   transition:
-    opacity 0.15s ease,
-    transform 0.15s ease;
+    opacity 0.5s ease,
+    transform 0.5s ease;
 }
 #panel::after {
   /* little tail pointing at the pet */

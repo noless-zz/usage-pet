@@ -230,6 +230,7 @@
 
   // ---------- panel visibility ----------
   function showPanel() {
+    lastOver = Date.now();
     clearTimeout(hoverTimer);
     panel.classList.remove('hidden');
   }
@@ -238,6 +239,22 @@
     clearTimeout(hoverTimer);
     hoverTimer = setTimeout(() => panel.classList.add('hidden'), 350);
   }
+
+  // Safety net: hide the bubble once the mouse has really been away from the pet.
+  // Hover-only bubble goes after 1.5 s; a bubble opened by clicking stays 30 s.
+  const HOVER_GRACE_MS = 1500;
+  const PINNED_GRACE_MS = 30000;
+  let lastOver = Date.now();
+  setInterval(async () => {
+    if (panel.classList.contains('hidden')) return;
+    const c = await api.cursor().catch(() => null);
+    const el = c && document.elementFromPoint(c.x, c.y);
+    if (dragging || (el && (petEl.contains(el) || panel.contains(el)))) lastOver = Date.now();
+    else if (Date.now() - lastOver > (pinned ? PINNED_GRACE_MS : HOVER_GRACE_MS)) {
+      pinned = false;
+      panel.classList.add('hidden');
+    }
+  }, 400);
 
   // ---------- mouse: click-through except over the pet / open panel ----------
   let over = false;

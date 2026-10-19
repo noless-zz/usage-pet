@@ -651,6 +651,14 @@ ipcMain.on('pet:menu', () => {
 ipcMain.on('pet:open-claude', () => shell.openExternal(CLAUDE + '/new'));
 ipcMain.on('pet:login', openLogin);
 ipcMain.on('pet:refresh', refresh);
+// Cursor position inside the pet window (null when the window is gone). The page uses this to
+// notice the mouse left: a click-through window gets no mouseleave once the cursor is outside it.
+ipcMain.handle('pet:cursor', () => {
+  if (!petWin || petWin.isDestroyed()) return null;
+  const p = screen.getCursorScreenPoint();
+  const b = petWin.getContentBounds();
+  return { x: p.x - b.x, y: p.y - b.y };
+});
 ipcMain.handle('pet:get-state', () => petState());
 
 // ---------- app lifecycle ----------
